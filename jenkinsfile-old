@@ -1,0 +1,50 @@
+pipeline {
+
+    agent any
+
+    parameters {
+    choice(name: 'tfaction', choices: ['init', 'plan', 'validate', 'apply', 'destroy'], description: 'Pick any action')
+               }
+
+    stages {
+        stage ('Creating infra for RoboShop') {
+            steps {
+                script {
+                    if (params.tfaction == 'init') {
+                    sh "terraform ${params.tfaction}"
+                    } 
+                    if (params.tfaction == 'plan') {
+                    sh "terraform init"
+                    sh "terraform plan" 
+                    } 
+                    if (params.tfaction == 'apply') {
+                    sh "terraform init"
+                    sh "terraform apply -auto-approve"
+                    } 
+                    if (params.tfaction == 'destroy') {
+                    sh "terraform init"
+                    sh "terraform destroy -auto-approve"   
+                    }
+                    if (params.tfaction == 'validate') {
+                    sh "terraform init"
+                    sh "terraform validate"   
+                    }                         
+                    }
+                    }
+                  }
+        stage ('Installing Components') {
+            when {
+                expression {params.tfaction == 'apply'}
+                }
+            steps {
+                git 'https://github.com/imjitthu/Ansible.git'
+                ansiblePlaybook credentialsId: 'DevOps321', installation: 'ansibletool', inventory: '/tmp/inv', playbook: 'Ansible/roboshop.yml'
+                }
+                }
+                }
+        post { 
+            always { 
+                cleanWs()
+                }
+        }
+    }
